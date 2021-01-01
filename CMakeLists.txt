@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-project ("uboost2")
+project ("uboost2" LANGUAGES CXX)
 
 # Include sub-projects.
-add_subdirectory ("src")
+add_subdirectory ("src" "include")
