@@ -6,6 +6,7 @@
 
 
 class LayerWiseTreeBuilder : public TreeBuilder {
+	const DMatrix<>& x;
 	EntryMatrix entries;
 	size_t nrows, ncols;
 	double y_mean;
@@ -20,7 +21,7 @@ protected:
 		nodes.push_back(trees::ROOTID);
 	}
 public:
-	LayerWiseTreeBuilder(const DMatrix<>& x, const DColumn<>& y) : entries{ x, y } {
+	LayerWiseTreeBuilder(const DMatrix<>& x, const DColumn<>& y) : entries{ x, y }, x{ x } {
 		nrows = x.nrows();
 		ncols = x.ncols();
 		y_mean = y.sum() / nrows;
@@ -29,26 +30,17 @@ public:
 	void update(Tree& tree) override {
 		assert(tree[trees::ROOTID].is_leaf);
 
+		//std::unordered_map<size_t, Split> best_splits;
+		std::vector<Split> best_splits;
+		best_splits.resize(trees::max_idx_at_depth(tree.get_max_depth()), Split::build_unsuccessful_split());
+		//std::unordered_map<size_t, MSESplitter> splitters;
+		std::vector<MSESplitter> splitters;
+		splitters.resize(trees::max_idx_at_depth(tree.get_max_depth()));
+		
 		init(tree);
 		for (size_t curr_depth = 0; curr_depth < tree.get_max_depth(); curr_depth++) {
 			if (nodes.size() == 0) break;
 
-			std::unordered_map<size_t, Split> best_splits;
-			best_splits.reserve(nodes.size());
-			std::unordered_map<size_t, MSESplitter> splitters;
-			splitters.reserve(nodes.size());
-
-			for (auto nid : nodes) {
-				splitters[nid] = MSESplitter();
-				best_splits[nid] = Split::build_unsuccessful_split();
-				/*
-				for (const auto& e : DColumn<Entry>(entries, 0)) {
-					if (position[e.i] == nid) {
-						splitters[nid].add(e);
-					}
-				}
-				*/
-			}
 			for (const auto& e : DColumn<Entry>(entries, 0)) {
 				if (position[e.i] >= 0) {
 					splitters[position[e.i]].add(e);
@@ -58,27 +50,27 @@ public:
 			// search splits
 			for (size_t col = 0; col < ncols; col++) {
 				for (auto nid : nodes) splitters[nid].start_splitting(col);
-				for (const auto& e : DColumn<Entry>(entries, col)) {
-					int nid = position[e.i];
+				for (size_t i = 0; i < nrows; i++){
+					const auto& e = entries(i, col);
+					const int& nid = position[e.i];
 					if (nid < 0) continue;
-					const Split candidate_split = splitters[nid].build_split(e);
+					const Split& candidate_split = splitters[nid].build_split(e);
 					if (!candidate_split.succesful) continue;
 					if (candidate_split > best_splits[nid]) best_splits[nid] = candidate_split;
 				}
 			}
 			
-			// update position
-
-			for (size_t nid : nodes) {
+			// update position			
+			for (size_t i = 0; i < nrows; i++) {
+				int nid = position[i];
+				if (nid < 0) continue;
 				const Split& split = best_splits[nid];
-				if (split.succesful) {
-					for (auto e : DColumn<Entry>(entries, split.column)) {
-						if (position[e.i] == nid) { // is on leaf nid
-							if (e.f >= split.threshold) position[e.i] = trees::right_child(nid);
-							else position[e.i] = trees::left_child(nid);
-						}
-					}
-				}
+				if (!split.succesful) {
+					position[i] = -1;
+					continue;
+				}			
+				if (x(i, split.column) >= split.threshold) position[i] = trees::right_child(nid);
+				else position[i] = trees::left_child(nid);
 			}
 
 			// update tree

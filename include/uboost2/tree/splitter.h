@@ -25,6 +25,7 @@ class MSESplitter : public Splitter {
 	//
 	bool first;
 	double previous_f;
+	double p_criterion;
 public:
 	MSESplitter(size_t min_samples_leaf=1) {
 		this->min_samples_leaf = min_samples_leaf;
@@ -47,18 +48,19 @@ public:
 		s2r = s2;
 		nr = n;
 		//
+		p_criterion = s * s / n - s2;
 		first = true;
 		previous_f = NAN;
 	}
-	const Split build_split(const Entry& e) override {
+	inline const Split build_split(const Entry& e) override {
 		Split split = Split::build_unsuccessful_split();
 		split.succesful = true;
 		double delta_x = e.f - previous_f;
 		
-		if (first) {
-			first = false;
-			split.succesful = false;
-		}
+		//if (first) {
+		//	first = false;
+		//	split.succesful = false;
+		//}
 		if (nl < min_samples_leaf || nr < min_samples_leaf) {
 			split.succesful = false;
 		}
@@ -73,7 +75,7 @@ public:
 			split.i = e.i;
 			split.l_criterion = sl * sl / nl - s2l;
 			split.r_criterion = sr * sr / nr - s2r;
-			split.p_criterion = s * s / n - s2;
+			split.p_criterion = this->p_criterion;
 			split.criterion_gain = split.l_criterion + split.r_criterion - split.p_criterion;
 			split.l_n = nl;
 			split.r_n = nr;
@@ -81,7 +83,7 @@ public:
 			split.l_value = sl / nl;
 			split.r_value = sr / nr;
 			split.p_value = s / n;
-			split.succesful = true;
+			//split.succesful = true;
 		}
 
 		// update statistics for next split

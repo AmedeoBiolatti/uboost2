@@ -41,16 +41,12 @@ public:
 	}
 	//
 	inline TreeNode& operator[](size_t nid) {
-#ifdef  DEBUG
-		if (nid >= nodes.size()) std::printf("Node %d out of bound!\n", nid);
-#endif //  DEBUG
-
 		return nodes[nid];
 	}
 	inline const TreeNode& operator[](size_t nid) const {
-#ifdef  DEBUG
-		if (nid >= nodes.size()) std::printf("Node %d out of bound!\n", nid);
-#endif //  DEBUG
+		return nodes[nid];
+	}
+	inline TreeNode& get_node(size_t nid) {
 		return nodes[nid];
 	}
 	//
@@ -68,10 +64,10 @@ public:
 		}
 		return nid;
 	}
-	size_t predict_value(const DMatrix<>& x, size_t i) const {
+	double predict_value(const DMatrix<>& x, size_t i) const {
 		return nodes[predict_leaf(x, i)].value;
 	}
-	size_t predict_value(const DRow<>& xi) const {
+	double predict_value(const DRow<>& xi) const {
 		return nodes[predict_leaf(xi)].value;
 	}
 	//

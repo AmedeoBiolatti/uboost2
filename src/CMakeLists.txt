@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.8)
 set(CMAKE_CXX_STANDARD 20)	
-set(CMAKE_CXX_FLAGS "-O2 -Wall -ffast-math")
+set(CMAKE_CXX_FLAGS "-O3 -Wall -ffast-math")
 
 find_package(PythonLibs 3.8 REQUIRED)
 find_package(PythonInterp 3.8 REQUIRED)
@@ -35,5 +35,4 @@ target_link_libraries(core "${PYTHON_LIBRARIES}")
 add_executable(
 	main0
 	"main0.cpp"
-	"../include"
 )
