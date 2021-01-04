@@ -26,7 +26,6 @@ class Tree {
 	std::vector<TreeNode> nodes;
 protected:
 	void reserve(size_t depth) {
-		//nodes.reserve(trees::max_idx_at_depth(depth) + 1);
 		nodes.resize(trees::max_idx_at_depth(depth) + 1);
 	}
 public:
@@ -64,11 +63,20 @@ public:
 		}
 		return nid;
 	}
-	double predict_value(const DMatrix<>& x, size_t i) const {
+	//
+	double predict_value_row(const DMatrix<>& x, size_t i) const {
 		return nodes[predict_leaf(x, i)].value;
 	}
-	double predict_value(const DRow<>& xi) const {
+	double predict_value_row(const DRow<>& xi) const {
 		return nodes[predict_leaf(xi)].value;
+	}
+	//
+	DColumn<> predict_value(const DMatrix<>& x) const {
+		DColumn<> out(x.nrows());
+		for (size_t i = 0; i < x.nrows(); i++) {
+			out(i) = this->predict_value_row(x, i);
+		}
+		return out;
 	}
 	//
 	size_t get_n_leaves(size_t nid = trees::ROOTID) const {

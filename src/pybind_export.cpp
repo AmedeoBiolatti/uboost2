@@ -19,8 +19,9 @@ PYBIND11_MODULE(_core, m) {
 
 	py::class_<DColumn<>>(m, "DColumn");
 	m.def("numpyToDColumn", &numpyToDColumn, "...");
+	m.def("DColumntoNumpyInplace", &DColumntoNumpyInplace, "...");
 
-	// tree
+	// standard decision tree & builders
 	py::class_<TreeNode>(m, "TreeNode")
 		.def_readwrite("is_leaf", &TreeNode::is_leaf)
 		.def_readwrite("value", &TreeNode::value)
@@ -33,7 +34,8 @@ PYBIND11_MODULE(_core, m) {
 
 	py::class_<Tree>(m, "Tree")
 		.def(py::init<size_t>(), py::arg("max_depth")=10)
-		.def("predict_value", py::overload_cast<const DMatrix<double>&, size_t>(&Tree::predict_value, py::const_))
+		.def("predict_value_row", py::overload_cast<const DMatrix<double>&, size_t>(&Tree::predict_value_row, py::const_))
+		.def("predict_value", &Tree::predict_value)
 		.def("predict_leaf", py::overload_cast<const DMatrix<double>&, size_t>(&Tree::predict_leaf, py::const_))
 		.def("get_node", &Tree::get_node)
 		;

@@ -37,3 +37,19 @@ DColumn<double> numpyToDColumn(py::array_t<double> arr) {
 
 	return data;
 }
+
+
+void DColumntoNumpyInplace(const DColumn<double> xin, py::array_t<double> xout) {
+	auto r = xout.request();
+	if (r.ndim != 1) {
+		throw std::runtime_error("NDIM Must be == 1");
+	}
+	if (r.shape[0] != xin.nrows()) {
+		throw std::runtime_error("Number of rows must be the same");
+	}
+	auto p = reinterpret_cast<double*>(r.ptr);
+
+	for (size_t i = 0; i < r.shape[0]; i++) {
+		p[i] = xin(i);
+	}
+}
