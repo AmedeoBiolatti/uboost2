@@ -1,8 +1,9 @@
 #pragma once
 
-#include <unordered_map>
+#include <random>
 
 #include <uboost2/tree/builder/builder.h>
+#include <uboost2/tree/column_proposer.h>
 
 
 class LayerWiseTreeBuilder : public TreeBuilder {
@@ -14,6 +15,7 @@ class LayerWiseTreeBuilder : public TreeBuilder {
 	std::vector<size_t> nodes;
 	//
 	size_t min_samples_leaf = 1, min_samples_split=2;
+	double colsample_bytree = 1.0, colsample_bylevel = 1.0;
 protected:
 	void init(Tree& tree) {
 		tree[trees::ROOTID].value = y_mean;
@@ -23,16 +25,21 @@ protected:
 		nodes.push_back(trees::ROOTID);
 	}
 public:
-	LayerWiseTreeBuilder(const DMatrix<>& x, const DColumn<>& y, size_t min_samples_leaf=1, size_t min_samples_split=2) : entries{ x, y }, x{ x } {
+	LayerWiseTreeBuilder(const DMatrix<>& x, const DColumn<>& y, size_t min_samples_leaf=1, size_t min_samples_split=2,
+		double colsample_bytree = 1.0, double colsample_bylevel = 1.0) : entries{ x, y }, x{ x } {
 		nrows = x.nrows();
 		ncols = x.ncols();
 		y_mean = y.sum() / nrows;
 		entries.sort_columns();
 		this->min_samples_leaf = min_samples_leaf;
 		this->min_samples_split = min_samples_split;
+		this->colsample_bytree = colsample_bytree;
+		this->colsample_bylevel = colsample_bylevel;
 	}
 	void update(Tree& tree) override {
 		assert(tree[trees::ROOTID].is_leaf);
+
+		ColumnProposer column_proposer(ncols, colsample_bytree, colsample_bylevel);
 
 		//std::unordered_map<size_t, Split> best_splits;
 		std::vector<Split> best_splits;
@@ -44,7 +51,6 @@ public:
 		init(tree);
 		for (size_t curr_depth = 0; curr_depth < tree.get_max_depth(); curr_depth++) {
 			if (nodes.size() == 0) break;
-
 			for (const auto& e : DColumn<Entry>(entries, 0)) {
 				if (position[e.i] >= 0) {
 					splitters[position[e.i]].add(e);
@@ -52,9 +58,10 @@ public:
 			}
 
 			// search splits
-			for (size_t col = 0; col < ncols; col++) {
+			const auto columns = column_proposer.get_columns();
+			for (size_t col : columns) {
 				for (auto nid : nodes) splitters[nid].start_splitting(col);
-				for (size_t i = 0; i < nrows; i++){
+				for (size_t i = 0; i < nrows; i++) {
 					const auto& e = entries(i, col);
 					const int& nid = position[e.i];
 					if (nid < 0) continue;

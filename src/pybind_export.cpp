@@ -41,8 +41,8 @@ PYBIND11_MODULE(_core, m) {
 		;
 
 	py::class_<LayerWiseTreeBuilder>(m, "LayerWiseTreeBuilder")
-		.def(py::init<const DMatrix<>&, const DColumn<>&, size_t, size_t>(), 
-			py::arg("x"), py::arg("y"), py::arg("min_samples_leaf")=1, py::arg("min_samples_split")=2)
+		.def(py::init<const DMatrix<>&, const DColumn<>&, size_t, size_t, double, double>(), 
+			py::arg("x"), py::arg("y"), py::arg("min_samples_leaf")=1, py::arg("min_samples_split")=2, py::arg("colsample_bytree")=1.0, py::arg("colsample_bylevel")=1.0)
 		.def("update", &LayerWiseTreeBuilder::update)
 		;
 

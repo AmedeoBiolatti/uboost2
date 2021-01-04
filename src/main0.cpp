@@ -8,7 +8,7 @@
 #include <uboost2/tree/builder/builder_layerwise.h>
 
 void main() {
-	size_t nrows = 10000, ncols = 50;
+	size_t nrows = 100, ncols = 50;
 	auto x = random::uniform(nrows, ncols);
 	auto y = random::uniform(nrows);
 	for (size_t i = 0; i < nrows; i++) {
@@ -16,7 +16,7 @@ void main() {
 	}
 
 	Tree t(12);
-	TreeBuilder* b = new LayerWiseTreeBuilder(x, y);
+	TreeBuilder* b = new LayerWiseTreeBuilder(x, y, 1, 2, 1.0, 0.8);
 	b->update(t);
 	
 	for (size_t i = 0; i < 10; i++)
