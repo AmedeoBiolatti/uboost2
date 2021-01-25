@@ -49,11 +49,11 @@ public:
 		return nodes[nid];
 	}
 	//
-	size_t predict_leaf(const DMatrix<>& x, size_t i) const {
+	inline size_t predict_leaf(const DMatrix<>& x, size_t i) const {
 		const auto& xi = DRow<>(x, i);
 		return this->predict_leaf(xi);
 	}
-	size_t predict_leaf(const DRow<>& xi) const {
+	inline size_t predict_leaf(const DRow<>& xi) const {
 		size_t nid{ trees::ROOTID };
 		while (!nodes[nid].is_leaf) {
 			auto xicol = xi(nodes[nid].column);
@@ -64,10 +64,10 @@ public:
 		return nid;
 	}
 	//
-	double predict_value_row(const DMatrix<>& x, size_t i) const {
+	inline double predict_value_row(const DMatrix<>& x, size_t i) const {
 		return nodes[predict_leaf(x, i)].value;
 	}
-	double predict_value_row(const DRow<>& xi) const {
+	inline double predict_value_row(const DRow<>& xi) const {
 		return nodes[predict_leaf(xi)].value;
 	}
 	//

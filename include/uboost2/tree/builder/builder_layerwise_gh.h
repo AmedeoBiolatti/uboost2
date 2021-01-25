@@ -6,34 +6,36 @@
 #include <uboost2/tree/column_proposer.h>
 
 
-class LayerWiseTreeBuilder : public TreeBuilder {
+class GHLayerWiseTreeBuilder : public TreeBuilder {
 	const DMatrix<>& x;
-	EntryMatrix* entries;
+	GHEntryMatrix* entries;
 	size_t nrows, ncols;
-	double y_mean;
+	double v_mean;
 	std::vector<int> position;
 	std::vector<size_t> nodes;
 	//
-	size_t min_samples_leaf = 1, min_samples_split = 2;
+	size_t min_samples_leaf = 1, min_samples_split=2;
 	double min_weight_leaf = 0.0, min_weight_split = 0.0;
 	double colsample_bytree = 1.0, colsample_bylevel = 1.0;
-	double reg_alpha = 0.0;
+	double reg_lambda = 1.0, reg_alpha = -INFINITY;
 protected:
 	void init(Tree& tree) {
-		tree[trees::ROOTID].value = y_mean;
+		tree[trees::ROOTID].value = v_mean;
 		position.clear();
 		position.resize(nrows, trees::ROOTID);
 		nodes.reserve(100);
 		nodes.push_back(trees::ROOTID);
 	}
 public:
-	LayerWiseTreeBuilder(const DMatrix<>& x, const DColumn<>& y, 
+	GHLayerWiseTreeBuilder(
+		const DMatrix<double>& x, const DColumn<double>& g, const DColumn<>& h,
 		size_t min_samples_leaf = 1, size_t min_samples_split = 2,
 		double min_weight_leaf = 0.0, double min_weight_split = 0.0,
-		double colsample_bytree = 1.0, double colsample_bylevel = 1.0, double reg_alpha=0.0) : entries{ new EntryMatrix(x, y) }, x{ x } {
+		double colsample_bytree = 1.0, double colsample_bylevel = 1.0,
+		double reg_lambda = 1.0, double reg_alpha = 0.0) : entries{ new GHEntryMatrix(x, g, h) }, x{ x } {
 		nrows = x.nrows();
 		ncols = x.ncols();
-		y_mean = entries->get_y_mean();
+		v_mean = g.sum() / (this->reg_lambda + h.sum());
 		entries->sort_columns();
 		this->min_samples_leaf = min_samples_leaf;
 		this->min_samples_split = min_samples_split;
@@ -41,22 +43,10 @@ public:
 		this->min_weight_split = min_weight_split;
 		this->colsample_bytree = colsample_bytree;
 		this->colsample_bylevel = colsample_bylevel;
+		this->reg_lambda = reg_lambda;
 		this->reg_alpha = reg_alpha;
 	}
-	LayerWiseTreeBuilder(EntryMatrix& e, size_t min_samples_leaf = 1, size_t min_samples_split = 2,
-		double min_weight_leaf = 0.0, double min_weight_split = 0.0,
-		double colsample_bytree = 1.0, double colsample_bylevel = 1.0) : entries{ &e }, x{ x } {
-		nrows = e.nrows();
-		ncols = e.ncols();
-		y_mean = entries->get_y_mean();
-		entries->sort_columns();
-		this->min_samples_leaf = min_samples_leaf;
-		this->min_samples_split = min_samples_split;
-		this->min_weight_leaf = min_weight_leaf;
-		this->min_weight_split = min_weight_split;
-		this->colsample_bytree = colsample_bytree;
-		this->colsample_bylevel = colsample_bylevel;
-	}
+	//
 	void update(Tree& tree) override {
 		assert(tree[trees::ROOTID].is_leaf);
 
@@ -66,13 +56,13 @@ public:
 		std::vector<Split> best_splits;
 		best_splits.resize(trees::max_idx_at_depth(tree.get_max_depth()), Split::build_unsuccessful_split(reg_alpha));
 		//std::unordered_map<size_t, MSESplitter> splitters;
-		std::vector<MSESplitter> splitters;
-		splitters.resize(trees::max_idx_at_depth(tree.get_max_depth()), MSESplitter(min_samples_leaf, min_weight_leaf));
-		
+		std::vector<GHSplitter> splitters;
+		splitters.resize(trees::max_idx_at_depth(tree.get_max_depth()), GHSplitter(this->min_samples_leaf, this->min_weight_leaf));
+
 		init(tree);
 		for (size_t curr_depth = 0; curr_depth < tree.get_max_depth(); curr_depth++) {
 			if (nodes.size() == 0) break;
-			for (const auto& e : DColumn<Entry>(*entries, 0)) {
+			for (const auto& e : DColumn<GHEntry>(*entries, 0)) {
 				if (position[e.i] >= 0) {
 					splitters[position[e.i]].add(e);
 				}
@@ -81,13 +71,13 @@ public:
 			// search splits
 			const auto columns = column_proposer.get_columns();
 			for (size_t col : columns) {
-				for (auto nid : nodes) splitters[nid].start_splitting(col);
+				for (size_t nid : nodes) splitters[nid].start_splitting(col);
 				for (size_t i = 0; i < nrows; i++) {
-					const auto& e = entries->operator()(i, col);
+					const GHEntry& e = entries->operator()(i, col);
 					const int& nid = position[e.i];
 					if (nid < 0) continue;
-					const Split& candidate_split = splitters[nid].build_split(e);
-					if (!candidate_split.succesful) continue;
+					const auto candidate_split = splitters[nid].build_split(e);
+					if (!candidate_split.succesful) continue; 
 					if (candidate_split > best_splits[nid]) best_splits[nid] = candidate_split;
 				}
 			}
@@ -146,7 +136,7 @@ public:
 				if (split.succesful) {
 					if (split.r_n >= this->min_samples_split && split.r_w >= min_weight_split)
 						nodes.push_back(trees::right_child(parent));
-					if (split.l_n >= this->min_samples_split && split.l_w >= min_weight_split) 
+					if (split.l_n >= this->min_samples_split && split.l_w >= min_weight_split)
 						nodes.push_back(trees::left_child(parent));
 				}
 			}

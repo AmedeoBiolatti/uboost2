@@ -142,6 +142,7 @@ public:
 		assert(m_data->size() > 0);
 		m_owning = false;
 	}
+	~DMatrix() {}
 	//
 	inline T& operator()(size_t i, size_t j) override {
 #ifdef DEBUG
@@ -164,6 +165,9 @@ public:
 	DColumn(const DMatrix<T>& mat, size_t col) : DMatrix<T>{ mat }, m_column{ col } {}
 	DColumn(size_t nrows) : DMatrix<T>{ nrows, 1 }, m_column{ 0 } {}
 	DColumn(size_t nrows, const T& t) : DMatrix<T>{ nrows, 1, t }, m_column{ 0 } {}
+	~DColumn() {
+
+	}
 	//
 	size_t nrows() const {
 		return DMatrix<T>::nrows();
@@ -224,6 +228,35 @@ namespace random {
 		DColumn<> m(nrows);
 		for (size_t i = 0; i < nrows; i++) {
 			m(i) = dis(gen);
+		}
+		return m;
+	}
+	//
+	DColumn<> normal(size_t nrows) {
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::normal_distribution<> dis(0.0, 1.0);
+		DColumn<> m(nrows);
+		for (size_t i = 0; i < nrows; i++) {
+			m(i) = dis(gen);
+		}
+		return m;
+	}
+
+};
+
+namespace matrix {
+	DColumn<> ones(size_t nrows) {
+		DColumn<> m(nrows);
+		for (size_t i = 0; i < nrows; i++) {
+			m(i) = 1.0;
+		}
+		return m;
+	}
+	DColumn<> zeros(size_t nrows) {
+		DColumn<> m(nrows);
+		for (size_t i = 0; i < nrows; i++) {
+			m(i) = 0.0;
 		}
 		return m;
 	}

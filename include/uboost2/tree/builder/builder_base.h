@@ -83,7 +83,7 @@ protected:
 		auto entry_column = DColumn<Entry>(entries, best_split.column);
 		for (const Entry& e : entry_column) {
 			if (position[e.i] == nid) {
-				if (e.f >= best_split.threshold) position[e.i] = rchild;
+				if (e.x >= best_split.threshold) position[e.i] = rchild;
 				else position[e.i] = lchild;
 			}
 		}

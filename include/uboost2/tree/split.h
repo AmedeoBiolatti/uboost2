@@ -10,12 +10,19 @@ public:
 	double criterion_gain;
 	double l_criterion = NAN, r_criterion = NAN, p_criterion = NAN;
 	size_t l_n = 0, r_n = 0, p_n = 0;
+	double l_w = 0.0, r_w = 0.0, p_w = 0.0;
 	double l_value = NAN, r_value = NAN, p_value = NAN;
 
 	static Split build_unsuccessful_split() {
 		Split s;
 		s.succesful = false;
 		s.criterion_gain = -INFINITY;
+		return s;
+	}
+	static Split build_unsuccessful_split(double criterion_gain) {
+		Split s;
+		s.succesful = false;
+		s.criterion_gain = criterion_gain;
 		return s;
 	}
 	Split() {
